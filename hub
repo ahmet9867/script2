@@ -1,0 +1,213 @@
+-- Roblox Animated Hub
+-- Place this LocalScript in StarterPlayer > StarterPlayerScripts **OR** inside a ScreenGui in StarterGui.
+-- The script will create a ScreenGui + toggle button and an animated hub frame that opens/closes with TweenService.
+-- Press the on-screen toggle button or the H key to open/close the hub.
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+local mouse = player:GetMouse()
+
+-- Configuration
+local TOGGLE_KEY = Enum.KeyCode.H -- change to preferred key
+local TWEEN_INFO = TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+local HUB_WIDTH = UDim.new(0, 400)
+local HUB_HEIGHT = UDim.new(0, 300)
+
+-- Create GUI (programmatic so you can paste this script directly)
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AnimatedHubGUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+-- Background overlay (semi-transparent when open)
+local overlay = Instance.new("Frame")
+overlay.Name = "Overlay"
+overlay.Size = UDim2.new(1,0,1,0)
+overlay.Position = UDim2.new(0,0,0,0)
+overlay.BackgroundTransparency = 1
+overlay.BackgroundColor3 = Color3.fromRGB(0,0,0)
+overlay.ZIndex = 1
+overlay.Parent = screenGui
+
+-- Hub holder frame (centered)
+local hubFrame = Instance.new("Frame")
+hubFrame.Name = "HubFrame"
+hubFrame.Size = UDim2.new(0, 0, 0, 0) -- start closed
+hubFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+hubFrame.Position = UDim2.new(0.5, 0.5, 0.5, 0)
+hubFrame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+hubFrame.BorderSizePixel = 0
+hubFrame.ZIndex = 2
+hubFrame.Parent = screenGui
+
+-- Rounded corner and shadow (UI design touches)
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 10)
+corner.Parent = hubFrame
+
+local shadow = Instance.new("ImageLabel")
+shadow.Name = "Shadow"
+shadow.AnchorPoint = Vector2.new(0.5, 0.5)
+shadow.BackgroundTransparency = 1
+shadow.Position = UDim2.new(0.5, 0.5, 0.5, 0)
+shadow.Size = UDim2.new(0, HUB_WIDTH.Offset + 40, 0, HUB_HEIGHT.Offset + 40)
+shadow.Image = "rbxassetid://383546520" -- subtle shadow image (built-in)
+shadow.ImageColor3 = Color3.new(0,0,0)
+shadow.ZIndex = 1
+shadow.Parent = hubFrame
+
+-- Title bar
+local titleBar = Instance.new("Frame")
+titleBar.Name = "TitleBar"
+titleBar.Size = UDim2.new(1,0,0,36)
+titleBar.Position = UDim2.new(0,0,0,0)
+titleBar.BackgroundTransparency = 1
+titleBar.Parent = hubFrame
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Name = "Title"
+titleLabel.Size = UDim2.new(1, -48, 1, 0)
+titleLabel.Position = UDim2.new(0, 12, 0, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "My Hub"
+titleLabel.TextSize = 20
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.TextColor3 = Color3.fromRGB(255,255,255)
+titleLabel.ZIndex = 3
+titleLabel.Parent = titleBar
+
+-- Close button
+local closeBtn = Instance.new("TextButton")
+closeBtn.Name = "CloseBtn"
+closeBtn.Size = UDim2.new(0, 32, 0, 32)
+closeBtn.Position = UDim2.new(1, -40, 0, 2)
+closeBtn.AnchorPoint = Vector2.new(0, 0)
+closeBtn.BackgroundTransparency = 0
+closeBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+closeBtn.Text = "X"
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 18
+closeBtn.TextColor3 = Color3.new(1,1,1)
+closeBtn.ZIndex = 4
+closeBtn.Parent = titleBar
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0,6)
+closeCorner.Parent = closeBtn
+
+-- Content area
+local content = Instance.new("Frame")
+content.Name = "Content"
+content.Position = UDim2.new(0,0,0,36)
+content.Size = UDim2.new(1,0,1,-36)
+content.BackgroundTransparency = 1
+content.Parent = hubFrame
+
+-- Example button inside hub
+local exampleBtn = Instance.new("TextButton")
+exampleBtn.Name = "ExampleBtn"
+exampleBtn.Size = UDim2.new(0, 140, 0, 36)
+exampleBtn.Position = UDim2.new(0, 12, 0, 12)
+exampleBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
+exampleBtn.BorderSizePixel = 0
+exampleBtn.Text = "Example Action"
+exampleBtn.Font = Enum.Font.Gotham
+exampleBtn.TextSize = 16
+exampleBtn.TextColor3 = Color3.fromRGB(255,255,255)
+exampleBtn.ZIndex = 3
+exampleBtn.Parent = content
+local exampleCorner = Instance.new("UICorner")
+exampleCorner.CornerRadius = UDim.new(0,6)
+exampleCorner.Parent = exampleBtn
+
+-- Toggle button (small button on-screen)
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Name = "ToggleHub"
+toggleBtn.Size = UDim2.new(0, 120, 0, 36)
+toggleBtn.Position = UDim2.new(0.02, 0, 0.9, 0)
+toggleBtn.AnchorPoint = Vector2.new(0, 0)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+toggleBtn.BorderSizePixel = 0
+toggleBtn.Text = "Open Hub (H)"
+toggleBtn.Font = Enum.Font.Gotham
+toggleBtn.TextSize = 16
+toggleBtn.TextColor3 = Color3.fromRGB(255,255,255)
+toggleBtn.ZIndex = 5
+toggleBtn.Parent = screenGui
+local toggleCorner = Instance.new("UICorner")
+toggleCorner.CornerRadius = UDim.new(0,8)
+toggleCorner.Parent = toggleBtn
+
+-- State
+local isOpen = false
+
+-- Tween targets
+local openSize = UDim2.new(HUB_WIDTH.Scale, HUB_WIDTH.Offset, HUB_HEIGHT.Scale, HUB_HEIGHT.Offset)
+local closedSize = UDim2.new(0, 0, 0, 0)
+
+local overlayOpen = 0.45
+local overlayClosed = 1
+
+-- Helper: play tween for open/close
+local function toggleHub(open)
+    if open == isOpen then return end
+    isOpen = open
+
+    if open then
+        -- overlay fades in (from transparent to semi-transparent black)
+        TweenService:Create(overlay, TWEEN_INFO, {BackgroundTransparency = 1 - overlayOpen}):Play()
+        -- hub grows
+        TweenService:Create(hubFrame, TWEEN_INFO, {Size = openSize}):Play()
+        -- update toggle text
+        toggleBtn.Text = "Close Hub (H)"
+    else
+        TweenService:Create(overlay, TWEEN_INFO, {BackgroundTransparency = overlayClosed}):Play()
+        TweenService:Create(hubFrame, TWEEN_INFO, {Size = closedSize}):Play()
+        toggleBtn.Text = "Open Hub (H)"
+    end
+end
+
+-- Connect UI events
+toggleBtn.Activated:Connect(function()
+    toggleHub(not isOpen)
+end)
+
+closeBtn.Activated:Connect(function()
+    toggleHub(false)
+end)
+
+-- Example action button callback
+exampleBtn.Activated:Connect(function()
+    -- put your action here (no harmul operations!)
+    exampleBtn.Text = "Done!"
+    wait(0.6)
+    exampleBtn.Text = "Example Action"
+end)
+
+-- Keybind to toggle
+mouse.KeyDown:Connect(function(key)
+    if RunService:IsClient() then
+        local k = string.upper(key)
+        if k == tostring(TOGGLE_KEY.Name) then
+            toggleHub(not isOpen)
+        end
+    end
+end)
+
+-- Click outside to close
+overlay.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 and isOpen then
+        toggleHub(false)
+    end
+end)
+
+-- Initialization: ensure closed state
+hubFrame.Size = closedSize
+overlay.BackgroundTransparency = 1
+
+-- Optional: tween hub alpha/position for a nicer entrance
+-- You can modify TWEEN_INFO or easing styles to taste.
+
+print("Animated Hub loaded - press H or use the on-screen button to toggle")
